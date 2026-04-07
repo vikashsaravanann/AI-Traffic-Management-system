@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Yudhisthra — AI Traffic Management System
 Team: Yudhisthra | Hackathon Project
@@ -10,9 +11,10 @@ import numpy as np
 import serial
 import time
 import threading
+import serial.tools.list_ports
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
-ARDUINO_PORT = 'COM3'       # Windows: COM3 | Linux/Mac: /dev/ttyUSB0
+ARDUINO_PORT = 'COM3'       # Fallback: Windows: COM3 | Linux/Mac: /dev/ttyUSB0
 BAUD_RATE    = 9600
 NUM_LANES    = 4
 MIN_AREA     = 500
@@ -39,13 +41,26 @@ lock = threading.Lock()
 
 # ─── ARDUINO ──────────────────────────────────────────────────────────────────
 def connect_arduino():
+    # Try auto-detection for Mac, Linux, and Windows
+    ports = list(serial.tools.list_ports.comports())
+    targets = ['USB', 'UART', 'ACM', 'cu.usb', 'COM']
+    found_port = None
+    
+    for p in ports:
+        if any(t in p.device for t in targets):
+            found_port = p.device
+            break
+            
+    port_to_try = found_port if found_port else ARDUINO_PORT
+    
     try:
-        ard = serial.Serial(ARDUINO_PORT, BAUD_RATE, timeout=1)
+        ard = serial.Serial(port_to_try, BAUD_RATE, timeout=0.1)
         time.sleep(2)
-        print(f"[✓] Arduino connected on {ARDUINO_PORT}")
+        print(f"  [✓] Arduino connected on {port_to_try}")
         return ard
     except Exception as e:
-        print(f"[!] Arduino not found ({e}) — simulation mode only")
+        print(f"  [!] Arduino hardware not detected on {port_to_try}")
+        print(f"      Status: Running in Software Simulation Mode")
         return None
 
 # ─── VEHICLE DETECTION ────────────────────────────────────────────────────────
@@ -160,7 +175,16 @@ def run_single_camera(arduino):
 # ─── MULTI CAMERA (FULL MODE) ─────────────────────────────────────────────────
 def run_multi_camera(arduino):
     print("\n[Yudhisthra] Multi-camera mode — 4 real lanes")
-    caps = [cv2.VideoCapture(s) for s in LANE_SOURCES]
+    
+    # Use a dictionary to keep track of opened capture objects to avoid redundant opens
+    cap_pool = {}
+    caps = []
+    
+    for s in LANE_SOURCES:
+        if s not in cap_pool:
+            cap_pool[s] = cv2.VideoCapture(s)
+        caps.append(cap_pool[s])
+        
     subs = [cv2.createBackgroundSubtractorMOG2() for _ in range(NUM_LANES)]
 
     threading.Thread(target=signal_controller, args=(arduino,), daemon=True).start()

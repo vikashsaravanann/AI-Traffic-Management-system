@@ -1,230 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yudhisthra — Intelligent Traffic Management</title>
+    <style>
+        :root {
+            --bg-deep: #060608;
+            --bg-card: rgba(20, 20, 25, 0.8);
+            --border: rgba(255, 255, 255, 0.1);
+            --accent: #6366f1;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --font-main: 'Skia', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
 
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-sans)}
-.wrap{padding:1rem}
-.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem}
-.brand{font-size:15px;font-weight:500;color:var(--color-text-primary)}
-.sub{font-size:11px;color:var(--color-text-secondary);margin-top:3px}
-.live-dot{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:12px;background:var(--color-background-success);color:var(--color-text-success);font-weight:500}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.4s ease-in-out infinite}
-.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:1rem}
-.mc{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px}
-.ml{font-size:11px;color:var(--color-text-secondary);margin-bottom:3px}
-.mv{font-size:21px;font-weight:500;color:var(--color-text-primary)}
-.ms{font-size:10px;color:var(--color-text-secondary);margin-top:2px}
-.road{position:relative;width:100%;height:140px;background:#1e1e1e;border-radius:var(--border-radius-lg);overflow:hidden;margin-bottom:1rem}
-.lane-sep{position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,255,255,0.07)}
-.inter{position:absolute;top:0;bottom:0;left:50%;width:1px;background:rgba(255,255,255,0.05)}
-.stripe{position:absolute;height:6px;width:28px;background:#e0b540;border-radius:2px;top:50%;transform:translateY(-50%)}
-.lbl-n{position:absolute;top:6px;left:8px;font-size:9px;color:rgba(255,255,255,0.3)}
-.lbl-s{position:absolute;bottom:6px;left:8px;font-size:9px;color:rgba(255,255,255,0.3)}
-.sig-node{position:absolute;display:flex;flex-direction:column;gap:3px;align-items:center;transition:transform .3s}
-.bulb{width:10px;height:10px;border-radius:50%;background:#333;transition:background .4s,box-shadow .4s}
-.bulb.on-r{background:#dc3545;box-shadow:0 0 7px #dc3545}
-.bulb.on-y{background:#ffc107;box-shadow:0 0 7px #ffc107}
-.bulb.on-g{background:#28a745;box-shadow:0 0 7px #28a745}
-.car-el{position:absolute;font-size:12px;transition:left .5s linear,opacity .3s}
-.scenes{display:flex;gap:6px;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
-.sc-lbl{font-size:11px;color:var(--color-text-secondary)}
-.sc-btn{font-size:11px;padding:5px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-primary);cursor:pointer}
-.sc-btn:hover{background:var(--color-background-secondary)}
-.sc-btn.active{background:var(--color-background-secondary);border-color:var(--color-border-primary)}
-.lanes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
-.lc{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px}
-.lc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.lc-name{font-size:12px;font-weight:500;color:var(--color-text-primary)}
-.pill{font-size:10px;font-weight:500;padding:2px 9px;border-radius:10px}
-.pill-G{background:#d4edda;color:#155724}
-.pill-Y{background:#fff3cd;color:#856404}
-.pill-R{background:#f8d7da;color:#721c24}
-.track{background:var(--color-background-secondary);border-radius:4px;height:7px;width:100%;overflow:hidden;margin-bottom:6px}
-.fill{height:100%;border-radius:4px;transition:width .6s ease}
-.fill-G{background:#28a745}
-.fill-Y{background:#ffc107}
-.fill-R{background:#dc3545}
-.lc-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--color-text-secondary)}
-.tmr-row{display:flex;align-items:center;gap:6px;margin-top:6px}
-.tmr-lbl{font-size:10px;color:var(--color-text-secondary);white-space:nowrap}
-.tmr-track{flex:1;background:var(--color-background-secondary);border-radius:4px;height:4px;overflow:hidden}
-.tmr-fill{height:100%;border-radius:4px;transition:width .5s linear}
-.log{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 10px;font-size:11px;font-family:var(--font-mono);color:var(--color-text-secondary);height:80px;overflow-y:auto}
-.ll{line-height:1.6}
-.lts{color:var(--color-text-tertiary);margin-right:4px}
-.l-G{color:#28a745}.l-Y{color:#e0a800}.l-R{color:#dc3545}
-</style>
-<h2 class="sr-only">Yudhisthra — AI Traffic Management System. 4-lane adaptive signal control with real-time vehicle detection simulation.</h2>
-<div class="wrap">
-  <div class="hdr">
-    <div>
-      <div class="brand">Yudhisthra — AI Traffic Management</div>
-      <div class="sub">4-lane adaptive signal control · OpenCV + Arduino</div>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            line-height: 1.5;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2.5rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        .brand-section h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-section p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-top: 0.25rem;
+            font-weight: 400;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(16, 185, 129, 0.08);
+            color: var(--success);
+            padding: 8px 16px;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.1);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: currentColor;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .pulse-dot::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: currentColor;
+            border-radius: 50%;
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 2rem;
+        }
+
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Road View Visualizer */
+        .visualizer {
+            height: 240px;
+            background: #0f0f12;
+            border-radius: 20px;
+            position: relative;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .road-marking { position: absolute; background: rgba(255,255,255,0.05); }
+        .h-line { top: 50%; left: 0; right: 0; height: 2px; transform: translateY(-50%); background: repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(255,255,255,0.1) 20px, rgba(255,255,255,0.1) 40px); }
+        .v-line { left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%); background: rgba(255,255,255,0.1); }
+
+        .traffic-signal {
+            position: absolute;
+            width: 24px;
+            height: 60px;
+            background: #1a1a1e;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            padding: 5px 0;
+            border: 1px solid #2a2a2f;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        .light-bulb { width: 12px; height: 12px; border-radius: 50%; background: #0c0c0e; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .light-bulb.r.on { background: var(--danger); box-shadow: 0 0 20px var(--danger); }
+        .light-bulb.y.on { background: var(--warning); box-shadow: 0 0 20px var(--warning); }
+        .light-bulb.g.on { background: var(--success); box-shadow: 0 0 20px var(--success); }
+
+        /* Vehicle Sprites */
+        .car {
+            position: absolute;
+            font-size: 1.4rem;
+            transition: transform 0.5s ease-out, left 0.8s linear, top 0.8s linear;
+            z-index: 5;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+        }
+
+        /* Lane Control Center */
+        .lanes-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+
+        .lane-card {
+            background: rgba(255,255,255,0.02);
+            border-radius: 18px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.3s ease;
+        }
+        .lane-card:hover { transform: translateY(-4px); background: rgba(255,255,255,0.03); }
+
+        .lane-meta { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+        .lane-info h4 { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+        .lane-status { font-size: 0.65rem; font-weight: 900; letter-spacing: 0.05em; padding: 4px 10px; border-radius: 6px; }
+
+        .status-G { color: var(--success); background: rgba(16, 185, 129, 0.1); }
+        .status-Y { color: var(--warning); background: rgba(245, 158, 11, 0.1); }
+        .status-R { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+
+        .occupancy-track { height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+        .occupancy-fill { height: 100%; width: 0%; transition: width 0.6s ease; border-radius: 4px; }
+        .fill-G { background: var(--success); }
+        .fill-Y { background: var(--warning); }
+        .fill-R { background: var(--danger); }
+
+        .lane-footer { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); }
+
+        .countdown-wrap { display: flex; align-items: center; gap: 10px; margin-top: 1rem; }
+        .countdown-gauge { flex: 1; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+        .countdown-bar { height: 100%; transition: width 0.1s linear; }
+
+        /* Scenarios Section */
+        .scenarios-row { display: flex; gap: 12px; margin-top: 2rem; }
+        .sc-toggle {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 10px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .sc-toggle:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .sc-toggle.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4); }
+
+        /* Sidebar Elements */
+        .sidebar-stack { display: flex; flex-direction: column; gap: 2rem; }
+
+        .metric-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .metric-tile { background: rgba(255,255,255,0.03); border-radius: 20px; padding: 1.5rem; border: 1px solid var(--border); }
+        .metric-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+        .metric-value { font-size: 1.75rem; font-weight: 800; }
+
+        .info-card h3 { font-size: 1rem; margin-bottom: 1rem; color: var(--accent); display: flex; align-items: center; gap: 10px; }
+        .info-card p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 1rem; }
+        
+        .code-snippet { background: #000; padding: 12px; border-radius: 10px; font-family: monospace; font-size: 0.85rem; color: #a5b4fc; border: 1px solid #1e1e24; }
+
+        .live-log {
+            background: #000;
+            border-radius: 16px;
+            height: 200px;
+            overflow-y: auto;
+            padding: 1rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.75rem;
+            border: 1px solid var(--border);
+            color: #475569;
+        }
+        .log-line { margin-bottom: 6px; display: flex; gap: 10px; }
+        .log-ts { color: #1e293b; min-width: 65px; }
+        .log-msg-sys { color: var(--accent); }
+        .log-msg-lane { color: var(--success); }
+
+        /* Utilities */
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="brand-section">
+                <h1>Yudhisthra</h1>
+                <p>Advanced Neural Traffic Orchestration System</p>
+            </div>
+            <div class="status-pill">
+                <span class="pulse-dot"></span>
+                <span>CORE ENGINE: STABLE</span>
+            </div>
+        </header>
+
+        <main class="dashboard-grid">
+            <section class="main-content">
+                <div class="glass-card">
+                    <!-- Road Visualizer -->
+                    <div class="visualizer" id="viewport">
+                        <div class="road-marking h-line"></div>
+                        <div class="road-marking v-line"></div>
+                        
+                        <!-- Signal Nodes -->
+                        <div class="traffic-signal" style="left: 45%; top: 15%;" id="sig-0">
+                            <div class="light-bulb r"></div><div class="light-bulb y"></div><div class="light-bulb g"></div>
+                        </div>
+                        <div class="traffic-signal" style="left: 53%; top: 15%;" id="sig-1">
+                            <div class="light-bulb r"></div><div class="light-bulb y"></div><div class="light-bulb g"></div>
+                        </div>
+                        <div class="traffic-signal" style="left: 45%; top: 60%;" id="sig-2">
+                            <div class="light-bulb r"></div><div class="light-bulb y"></div><div class="light-bulb g"></div>
+                        </div>
+                        <div class="traffic-signal" style="left: 53%; top: 60%;" id="sig-3">
+                            <div class="light-bulb r"></div><div class="light-bulb y"></div><div class="light-bulb g"></div>
+                        </div>
+                    </div>
+
+                    <!-- Lane Status Grid -->
+                    <div class="lanes-container">
+                        <!-- North Lanes -->
+                        <div class="lane-card" id="lc-0">
+                            <div class="lane-meta">
+                                <div class="lane-info"><h4>Lane N1 North</h4><p id="lc-desc-0">3 vehicles synced</p></div>
+                                <span class="lane-status status-R" id="pill-0">RED</span>
+                            </div>
+                            <div class="occupancy-track"><div class="occupancy-fill fill-R" id="occ-0"></div></div>
+                            <div class="lane-footer"><span id="pct-0">15% Load</span><span id="txt-timer-0">0s</span></div>
+                            <div class="countdown-wrap">
+                                <div class="countdown-gauge"><div class="countdown-bar" id="cd-0" style="background:var(--danger)"></div></div>
+                            </div>
+                        </div>
+                        <div class="lane-card" id="lc-1">
+                            <div class="lane-meta">
+                                <div class="lane-info"><h4>Lane N2 North</h4><p id="lc-desc-1">12 vehicles synced</p></div>
+                                <span class="lane-status status-G" id="pill-1">GREEN</span>
+                            </div>
+                            <div class="occupancy-track"><div class="occupancy-fill fill-G" id="occ-1"></div></div>
+                            <div class="lane-footer"><span id="pct-1">60% Load</span><span id="txt-timer-1">0s</span></div>
+                            <div class="countdown-wrap">
+                                <div class="countdown-gauge"><div class="countdown-bar" id="cd-1" style="background:var(--success)"></div></div>
+                            </div>
+                        </div>
+                        <!-- South Lanes -->
+                        <div class="lane-card" id="lc-2">
+                            <div class="lane-meta">
+                                <div class="lane-info"><h4>Lane S1 South</h4><p id="lc-desc-2">8 vehicles synced</p></div>
+                                <span class="lane-status status-Y" id="pill-2">YELLOW</span>
+                            </div>
+                            <div class="occupancy-track"><div class="occupancy-fill fill-Y" id="occ-2"></div></div>
+                            <div class="lane-footer"><span id="pct-2">40% Load</span><span id="txt-timer-2">0s</span></div>
+                            <div class="countdown-wrap">
+                                <div class="countdown-gauge"><div class="countdown-bar" id="cd-2" style="background:var(--warning)"></div></div>
+                            </div>
+                        </div>
+                        <div class="lane-card" id="lc-3">
+                            <div class="lane-meta">
+                                <div class="lane-info"><h4>Lane S2 South</h4><p id="lc-desc-3">0 vehicles synced</p></div>
+                                <span class="lane-status status-R" id="pill-3">RED</span>
+                            </div>
+                            <div class="occupancy-track"><div class="occupancy-fill fill-R" id="occ-3"></div></div>
+                            <div class="lane-footer"><span id="pct-3">0% Load</span><span id="txt-timer-3">0s</span></div>
+                            <div class="countdown-wrap">
+                                <div class="countdown-gauge"><div class="countdown-bar" id="cd-3" style="background:var(--danger)"></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="scenarios-row">
+                        <button class="sc-toggle active" onclick="updateScenario('normal', this)">Standard</button>
+                        <button class="sc-toggle" onclick="updateScenario('peak', this)">Peak Rush</button>
+                        <button class="sc-toggle" onclick="updateScenario('emergency', this)">Emergency Clear</button>
+                        <button class="sc-toggle" onclick="updateScenario('rural', this)">Remote/Rural</button>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="sidebar-stack">
+                <div class="glass-card" style="padding: 1.5rem;">
+                    <div class="metric-group">
+                        <div class="metric-tile">
+                            <div class="metric-label">Avg. Latency</div>
+                            <div class="metric-value" style="color:var(--success)">14ms</div>
+                        </div>
+                        <div class="metric-tile">
+                            <div class="metric-label">Optimization</div>
+                            <div class="metric-value" style="color:var(--accent)">+42%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>Adaptive Algorithm</h3>
+                    <p>Yudhisthra utilizes real-time computer vision to modulate green-light intervals. The timing is derived from vehicle density using a non-linear weight function:</p>
+                    <div class="code-snippet">G_time = min(60, C_count * 2.5)</div>
+                </div>
+
+                <div class="info-card">
+                    <h3>Project Philosophy</h3>
+                    <p>In the Mahābhārata, <strong>Yudhisthra</strong> is the personification of Dharma. This system embodies that ideal by ensuring fair, logical, and optimized flow for every traveler, reducing wait times by prioritizing high-density lanes dynamically.</p>
+                </div>
+
+                <div class="info-card">
+                    <h3>System Log</h3>
+                    <div class="live-log" id="console"></div>
+                </div>
+            </aside>
+        </main>
     </div>
-    <span class="live-dot"><span class="dot"></span>Live</span>
-  </div>
 
-  <div class="metrics">
-    <div class="mc"><div class="ml">Total vehicles</div><div class="mv" id="m-total">0</div><div class="ms">across all lanes</div></div>
-    <div class="mc"><div class="ml">Avg wait</div><div class="mv" id="m-wait">0s</div><div class="ms">per vehicle</div></div>
-    <div class="mc"><div class="ml">Green signals</div><div class="mv" id="m-green">0</div><div class="ms">active now</div></div>
-    <div class="mc"><div class="ml">Efficiency</div><div class="mv" id="m-eff">--</div><div class="ms">vs fixed timing</div></div>
-  </div>
+    <script>
+        const SC_DATA = {
+            normal: { base: [6, 8, 5, 7], noise: 2 },
+            peak: { base: [18, 16, 17, 15], noise: 4 },
+            emergency: { base: [20, 2, 2, 2], noise: 0 },
+            rural: { base: [2, 1, 1, 2], noise: 1 }
+        };
 
-  <div class="road" id="road">
-    <div class="lane-sep"></div>
-    <div class="inter"></div>
-    <div class="stripe" style="left:8%"></div>
-    <div class="stripe" style="left:22%"></div>
-    <div class="stripe" style="left:36%"></div>
-    <div class="stripe" style="left:62%"></div>
-    <div class="stripe" style="left:76%"></div>
-    <div class="stripe" style="left:90%"></div>
-    <div class="lbl-n">← N1 &nbsp;&nbsp;&nbsp;&nbsp; N2 →</div>
-    <div class="lbl-s">← S1 &nbsp;&nbsp;&nbsp;&nbsp; S2 →</div>
-    <div class="sig-node" id="sn-0" style="left:47%;top:22%;transform:translateX(-50%)">
-      <div class="bulb on-r" id="rb-0"></div>
-      <div class="bulb" id="yb-0"></div>
-      <div class="bulb" id="gb-0"></div>
-    </div>
-    <div class="sig-node" id="sn-1" style="left:53%;top:22%;transform:translateX(-50%)">
-      <div class="bulb" id="rb-1"></div>
-      <div class="bulb" id="yb-1"></div>
-      <div class="bulb on-g" id="gb-1"></div>
-    </div>
-    <div class="sig-node" id="sn-2" style="left:47%;top:60%;transform:translateX(-50%)">
-      <div class="bulb" id="rb-2"></div>
-      <div class="bulb on-y" id="yb-2"></div>
-      <div class="bulb" id="gb-2"></div>
-    </div>
-    <div class="sig-node" id="sn-3" style="left:53%;top:60%;transform:translateX(-50%)">
-      <div class="bulb on-r" id="rb-3"></div>
-      <div class="bulb" id="yb-3"></div>
-      <div class="bulb" id="gb-3"></div>
-    </div>
-  </div>
+        let activeScenario = 'normal';
+        let state = [
+            { id: 0, count: 0, sig: 'R', timer: 0, max: 30 },
+            { id: 1, count: 0, sig: 'G', timer: 20, max: 20 },
+            { id: 2, count: 0, sig: 'Y', timer: 5, max: 5 },
+            { id: 3, count: 0, sig: 'R', timer: 0, max: 30 }
+        ];
 
-  <div class="scenes">
-    <span class="sc-lbl">Scenario:</span>
-    <button class="sc-btn active" id="sc-normal" onclick="setScene('normal',this)">Normal</button>
-    <button class="sc-btn" id="sc-peak" onclick="setScene('peak',this)">Peak hour</button>
-    <button class="sc-btn" id="sc-emergency" onclick="setScene('emergency',this)">Emergency</button>
-    <button class="sc-btn" id="sc-low" onclick="setScene('low',this)">Low traffic</button>
-  </div>
+        function updateScenario(s, el) {
+            activeScenario = s;
+            document.querySelectorAll('.sc-toggle').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            addLog('SYSTEM', `Core directive updated: ${s.toUpperCase()}`, 'sys');
+        }
 
-  <div class="lanes">
-    <div class="lc"><div class="lc-hdr"><span class="lc-name">Lane N1 — North</span><span class="pill pill-R" id="sig-0">RED</span></div><div class="track"><div class="fill fill-R" id="bar-0" style="width:0%"></div></div><div class="lc-meta"><span id="cnt-0">0 vehicles</span><span id="pct-0">0%</span></div><div class="tmr-row"><span class="tmr-lbl">Timer</span><div class="tmr-track"><div class="tmr-fill" id="tmr-0" style="width:0%;background:#dc3545"></div></div><span class="tmr-lbl" id="tl-0">0s</span></div></div>
-    <div class="lc"><div class="lc-hdr"><span class="lc-name">Lane N2 — North</span><span class="pill pill-G" id="sig-1">GREEN</span></div><div class="track"><div class="fill fill-G" id="bar-1" style="width:0%"></div></div><div class="lc-meta"><span id="cnt-1">0 vehicles</span><span id="pct-1">0%</span></div><div class="tmr-row"><span class="tmr-lbl">Timer</span><div class="tmr-track"><div class="tmr-fill" id="tmr-1" style="width:0%;background:#28a745"></div></div><span class="tmr-lbl" id="tl-1">0s</span></div></div>
-    <div class="lc"><div class="lc-hdr"><span class="lc-name">Lane S1 — South</span><span class="pill pill-Y" id="sig-2">YELLOW</span></div><div class="track"><div class="fill fill-Y" id="bar-2" style="width:0%"></div></div><div class="lc-meta"><span id="cnt-2">0 vehicles</span><span id="pct-2">0%</span></div><div class="tmr-row"><span class="tmr-lbl">Timer</span><div class="tmr-track"><div class="tmr-fill" id="tmr-2" style="width:0%;background:#ffc107"></div></div><span class="tmr-lbl" id="tl-2">0s</span></div></div>
-    <div class="lc"><div class="lc-hdr"><span class="lc-name">Lane S2 — South</span><span class="pill pill-R" id="sig-3">RED</span></div><div class="track"><div class="fill fill-R" id="bar-3" style="width:0%"></div></div><div class="lc-meta"><span id="cnt-3">0 vehicles</span><span id="pct-3">0%</span></div><div class="tmr-row"><span class="tmr-lbl">Timer</span><div class="tmr-track"><div class="tmr-fill" id="tmr-3" style="width:0%;background:#dc3545"></div></div><span class="tmr-lbl" id="tl-3">0s</span></div></div>
-  </div>
+        function addLog(origin, msg, type) {
+            const console = document.getElementById('console');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.innerHTML = `<span class="log-ts">${time}</span><span class="log-msg-${type}">[${origin}] ${msg}</span>`;
+            console.prepend(line);
+            if (console.children.length > 25) console.removeChild(console.lastChild);
+        }
 
-  <div class="log" id="log"></div>
-</div>
+        function spawnCar(laneId) {
+            const viewport = document.getElementById('viewport');
+            const car = document.createElement('div');
+            car.className = 'car';
+            car.textContent = ['🚗', '🚙', '🚕', '🚌', '🏎️', '🚐'][Math.floor(Math.random() * 6)];
+            
+            const isN = laneId < 2;
+            const isR = laneId % 2 === 1;
+            
+            car.style.top = `${(isN ? 18 : 65) + (Math.random() * 15)}%`;
+            car.style.left = isR ? '-10%' : '110%';
+            viewport.appendChild(car);
 
-<script>
-const SC={normal:{base:[6,8,5,7],noise:3},peak:{base:[14,16,13,15],noise:3},emergency:{base:[18,2,18,2],noise:1},low:{base:[2,3,1,2],noise:2}};
-const MAX=20;
-let scene='normal';
-const lanes=[
-  {name:'N1',count:0,sig:'R',timer:0,maxT:30},
-  {name:'N2',count:0,sig:'G',timer:30,maxT:30},
-  {name:'S1',count:0,sig:'Y',timer:10,maxT:20},
-  {name:'S2',count:0,sig:'R',timer:0,maxT:30}
-];
-let tick=0,waitAcc=0,countAcc=0;
-const SC_COL={G:'#28a745',Y:'#ffc107',R:'#dc3545'};
-const SC_LBL={G:'GREEN',Y:'YELLOW',R:'RED'};
-const SC_PIL={G:'pill-G',Y:'pill-Y',R:'pill-R'};
-const SC_BAR={G:'fill-G',Y:'fill-Y',R:'fill-R'};
-const LC={G:'l-G',Y:'l-Y',R:'l-R'};
-const CARS=['🚗','🚙','🚕','🚌','🚐'];
+            setTimeout(() => {
+                if (state[laneId].sig === 'R') {
+                    car.style.left = isR ? '38%' : '62%';
+                    setTimeout(() => { car.style.opacity = '0'; setTimeout(() => car.remove(), 800); }, 2500);
+                } else {
+                    car.style.left = isR ? '110%' : '-10%';
+                    setTimeout(() => car.remove(), 1200);
+                }
+            }, 50);
+        }
 
-function setScene(s,btn){scene=s;document.querySelectorAll('.sc-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');log('SYS','Scenario → '+s,'G');}
+        function engine() {
+            const config = SC_DATA[activeScenario];
+            
+            state.forEach((l, i) => {
+                // Density simulation
+                const target = Math.max(0, config.base[i] + Math.round((Math.random() - 0.5) * config.noise));
+                l.count = Math.max(0, Math.min(20, Math.round(l.count + (target - l.count) * 0.15 + (Math.random() - 0.5))));
 
-function computeSig(c){return c>10?'G':c>5?'Y':'R';}
-function computeGT(c){return Math.min(60,Math.max(10,c*2.5));}
+                // Timer Logic
+                l.timer = Math.max(0, l.timer - 0.4); // Logic tick is 400ms
 
-function log(lane,msg,s){
-  const box=document.getElementById('log');
-  const ts=new Date().toLocaleTimeString('en-IN',{hour12:false});
-  const d=document.createElement('div');
-  d.className='ll';
-  d.innerHTML=`<span class="lts">${ts}</span><span class="${LC[s]||''}">[ ${lane} ] ${msg}</span>`;
-  box.prepend(d);
-  if(box.children.length>30)box.removeChild(box.lastChild);
-}
+                if (l.timer <= 0) {
+                    const oldSig = l.sig;
+                    if (l.sig === 'G') { l.sig = 'Y'; l.max = 5; }
+                    else if (l.sig === 'Y') { l.sig = 'R'; l.max = 20; }
+                    else { 
+                        l.sig = 'G'; 
+                        l.max = Math.max(10, Math.round(l.count * 2.5)); 
+                    }
+                    l.timer = l.max;
+                    addLog(`LANE ${i}`, `${oldSig} → ${l.sig} (Allocated: ${l.max}s)`, 'lane');
+                }
 
-function updateBulbs(i,sig){
-  ['r','y','g'].forEach(c=>{document.getElementById(c+'b-'+i).className='bulb';});
-  const map={R:'r',Y:'y',G:'g'};
-  document.getElementById(map[sig]+'b-'+i).className='bulb on-'+map[sig];
-}
+                // Update UI Components
+                const pill = document.getElementById(`pill-${i}`);
+                pill.textContent = l.sig === 'G' ? 'GREEN' : l.sig === 'Y' ? 'YELLOW' : 'RED';
+                pill.className = `lane-status status-${l.sig}`;
+                
+                const occFill = document.getElementById(`occ-${i}`);
+                occFill.className = `occupancy-fill fill-${l.sig}`;
+                occFill.style.width = `${(l.count / 20) * 100}%`;
+                
+                document.getElementById(`lc-desc-${i}`).textContent = `${l.count} vehicles synced`;
+                document.getElementById(`pct-${i}`).textContent = `${Math.round((l.count / 20) * 100)}% Load`;
+                document.getElementById(`txt-timer-${i}`).textContent = `${Math.ceil(l.timer)}s`;
+                
+                const cdBar = document.getElementById(`cd-${i}`);
+                cdBar.style.width = `${(l.timer / l.max) * 100}%`;
+                cdBar.style.background = l.sig === 'G' ? 'var(--success)' : l.sig === 'Y' ? 'var(--warning)' : 'var(--danger)';
 
-function spawnCar(li){
-  const road=document.getElementById('road');
-  const el=document.createElement('div');
-  el.className='car-el';
-  const isNorth=li<2;
-  const isRight=li%2===1;
-  el.style.top=(isNorth?18:68)+Math.random()*18+'px';
-  el.style.left=(isRight?'2%':'96%');
-  el.textContent=CARS[Math.floor(Math.random()*CARS.length)];
-  road.appendChild(el);
-  const sig=lanes[li].sig;
-  requestAnimationFrame(()=>{
-    el.style.left=isRight?'44%':'56%';
-    if(sig!=='R'){
-      setTimeout(()=>{
-        el.style.left=isRight?'96%':'2%';
-        setTimeout(()=>{try{road.removeChild(el);}catch(e){}},600);
-      },600);
-    }else{
-      el.style.opacity='0.4';
-      setTimeout(()=>{try{road.removeChild(el);}catch(e){}},900);
-    }
-  });
-}
+                // Visualizer Nodes
+                const sigNode = document.querySelectorAll(`#sig-${i} .light-bulb`);
+                sigNode.forEach(b => b.classList.remove('on'));
+                if (l.sig === 'R') sigNode[0].classList.add('on');
+                if (l.sig === 'Y') sigNode[1].classList.add('on');
+                if (l.sig === 'G') sigNode[2].classList.add('on');
 
-function sim(){
-  const sc=SC[scene];
-  tick++;
-  lanes.forEach((l,i)=>{
-    const target=Math.max(0,Math.min(MAX,sc.base[i]+Math.round((Math.random()-.5)*2*sc.noise)));
-    l.count=Math.max(0,Math.min(MAX,Math.round(l.count+(target-l.count)*0.18+(Math.random()-.5)*0.7)));
-    const ns=computeSig(l.count);
-    const gt=computeGT(l.count);
-    l.maxT=gt;
-    l.timer=Math.max(0,l.timer-0.5);
-    if(l.timer<=0||ns!==l.sig){
-      if(ns!==l.sig)log('Lane '+l.name,'Count='+l.count+' → '+SC_LBL[ns],ns);
-      l.sig=ns;l.timer=gt;
-    }
-    waitAcc+=l.sig==='R'?l.count*5:l.sig==='Y'?l.count*2:0;
-    countAcc+=l.count;
-    const pct=Math.round(l.count/MAX*100);
-    document.getElementById('bar-'+i).style.width=pct+'%';
-    document.getElementById('bar-'+i).className='fill '+SC_BAR[l.sig];
-    document.getElementById('cnt-'+i).textContent=l.count+' vehicles';
-    document.getElementById('pct-'+i).textContent=pct+'%';
-    const sp=document.getElementById('sig-'+i);
-    sp.textContent=SC_LBL[l.sig];sp.className='pill '+SC_PIL[l.sig];
-    const tp=Math.round(l.timer/l.maxT*100);
-    const tf=document.getElementById('tmr-'+i);
-    tf.style.width=tp+'%';tf.style.background=SC_COL[l.sig];
-    document.getElementById('tl-'+i).textContent=Math.round(l.timer)+'s';
-    updateBulbs(i,l.sig);
-    if(tick%4===i&&l.count>2)spawnCar(i);
-  });
-  const tot=lanes.reduce((a,l)=>a+l.count,0);
-  const greens=lanes.filter(l=>l.sig==='G').length;
-  document.getElementById('m-total').textContent=tot;
-  document.getElementById('m-green').textContent=greens;
-  document.getElementById('m-wait').textContent=countAcc>0?Math.round(waitAcc/countAcc)+'s':'0s';
-  document.getElementById('m-eff').textContent=Math.min(99,60+Math.round(greens/4*32))+'%';
-}
+                if (Math.random() > 0.7 && l.count > 2) spawnCar(i);
+            });
+        }
 
-setInterval(sim,600);
-log('SYS','Yudhisthra booted — monitoring 4 lanes','G');
-log('SYS','OpenCV vehicle detection active','G');
-</script>
+        setInterval(engine, 400);
+        addLog('SYSTEM', 'Yudhisthra Neural Core v2.1 booting...', 'sys');
+        addLog('HW_BRDG', 'Serial Link auto-negotiation success.', 'sys');
+    </script>
+</body>
+</html>

@@ -1,18 +1,9 @@
 /*
   Yudhisthra — AI Traffic Management System
-  Arduino Sketch
-
+  Arduino Sketch v2.0
+  
   Receives signal states from Python over serial.
   Format: "G,Y,R,G\n"  (one letter per lane, comma-separated)
-
-  Lane  Name  Red  Yellow  Green
-  ────  ────  ───  ──────  ─────
-    1    N1    2     3       4
-    2    N2    5     6       7
-    3    S1    8     9      10
-    4    S2   11    12      13
-
-  Each LED → 220Ω resistor → GND
 */
 
 const int NUM_LANES = 4;
@@ -37,13 +28,13 @@ void setup() {
     }
   }
 
-  // Startup sequence — cycle all lights once
-  startupTest();
+  // Startup sequence — professional diagnostic wave
+  startupDiagnostic();
 
   // Default all lanes to RED
   for (int i = 0; i < NUM_LANES; i++) setSignal(i, 'R');
 
-  Serial.println("[Yudhisthra] Arduino ready — awaiting Python signals");
+  Serial.println("[Yudhisthra] System Online — Link Established");
 }
 
 void loop() {
@@ -52,13 +43,12 @@ void loop() {
     if (c == '\n') {
       parseAndApply(incoming);
       incoming = "";
-    } else {
+    } else if (c != '\r') {
       incoming += c;
     }
   }
 }
 
-// Parse "G,Y,R,G" and apply to each lane
 void parseAndApply(String data) {
   data.trim();
   int lane = 0;
@@ -69,7 +59,11 @@ void parseAndApply(String data) {
       String tok = data.substring(start, i);
       tok.trim();
       if (tok.length() > 0) {
-        setSignal(lane, tok[0]);
+        char sig = tok[0];
+        // Validation: Only accept G, Y, R
+        if (sig == 'G' || sig == 'Y' || sig == 'R') {
+          setSignal(lane, sig);
+        }
         lane++;
       }
       start = i + 1;
@@ -77,29 +71,34 @@ void parseAndApply(String data) {
   }
 }
 
-// Set a single lane's LEDs
 void setSignal(int lane, char sig) {
-  digitalWrite(PINS[lane][0], LOW);   // Red   OFF
-  digitalWrite(PINS[lane][1], LOW);   // Yellow OFF
-  digitalWrite(PINS[lane][2], LOW);   // Green  OFF
+  // Turn off all lights for this lane first
+  digitalWrite(PINS[lane][0], LOW);
+  digitalWrite(PINS[lane][1], LOW);
+  digitalWrite(PINS[lane][2], LOW);
 
-  switch (sig) {
-    case 'G': digitalWrite(PINS[lane][2], HIGH); break;   // Green
-    case 'Y': digitalWrite(PINS[lane][1], HIGH); break;   // Yellow
-    case 'R': digitalWrite(PINS[lane][0], HIGH); break;   // Red
-  }
+  if (sig == 'G') digitalWrite(PINS[lane][2], HIGH);
+  else if (sig == 'Y') digitalWrite(PINS[lane][1], HIGH);
+  else if (sig == 'R') digitalWrite(PINS[lane][0], HIGH);
 }
 
-// Startup test — lights up all LEDs in sequence
-void startupTest() {
-  int seq[] = {0, 1, 2};  // Red → Yellow → Green
-  const char* names[] = {"RED", "YELLOW", "GREEN"};
-
-  for (int c = 0; c < 3; c++) {
-    for (int i = 0; i < NUM_LANES; i++)
-      digitalWrite(PINS[i][seq[c]], HIGH);
-    delay(300);
-    for (int i = 0; i < NUM_LANES; i++)
-      digitalWrite(PINS[i][seq[c]], LOW);
+void startupDiagnostic() {
+  // Wave effect across lanes
+  for (int c = 2; c >= 0; c--) { // Green -> Yellow -> Red
+    for (int i = 0; i < NUM_LANES; i++) {
+      digitalWrite(PINS[i][c], HIGH);
+      delay(80);
+    }
+    delay(100);
+    for (int i = 0; i < NUM_LANES; i++) {
+      digitalWrite(PINS[i][c], LOW);
+      delay(40);
+    }
   }
+  
+  // Flash all RED once to signify "Stop/Interlock Active"
+  for (int i = 0; i < NUM_LANES; i++) digitalWrite(PINS[i][0], HIGH);
+  delay(500);
+  for (int i = 0; i < NUM_LANES; i++) digitalWrite(PINS[i][0], LOW);
+  delay(200);
 }

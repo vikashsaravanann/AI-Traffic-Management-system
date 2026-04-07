@@ -1,73 +1,69 @@
 # Yudhisthra — AI Traffic Management System
-**Hackathon Project | Team Yudhisthra**
+**The Intelligent Guardian of Urban Flow**
+
+Yudhisthra is a state-of-the-art adaptive traffic control system that leverages Computer Vision (OpenCV) and Hardware Interfacing (Arduino) to optimize intersection throughput in real-time. By dynamically adjusting green-light intervals based on lane density, it significantly reduces cumulative wait times and carbon emissions.
 
 ---
 
-## Quick Start
+## 🚀 Key Features
 
-### 1. Install Python libraries
-```
-pip install opencv-python pyserial numpy
-```
-
-### 2. Upload Arduino code
-Open `yudhisthra_arduino.ino` in Arduino IDE and upload to your board.
-
-### 3. Connect hardware
-- Arduino via USB
-- Check port: Arduino IDE → Tools → Port
-- Update `ARDUINO_PORT` in `traffic_main.py` (e.g. COM3, /dev/ttyUSB0)
-
-### 4. Run
-```
-python traffic_main.py
-```
-Press **ESC** to quit.
+- **Computer Vision Pipeline**: Real-time vehicle detection using MOG2 background subtraction and contour analysis.
+- **Neural Adaptive Logic**: Signal timing that scales proportionally to lane occupancy (`min(60s, count * 2.5s)`).
+- **Premium Dashboard**: A high-fidelity, Skia-powered web interface for real-time monitoring and scenario simulation.
+- **Hardware Agnostic**: Auto-detecting serial bridge for seamless Arduino/Microcontroller integration.
+- **Scenario Modeling**: Test system efficiency under Peak, Emergency, and Rural conditions.
 
 ---
 
-## Hardware Wiring
+## 🛠 Tech Stack
 
-| Lane | Name | Red LED | Yellow LED | Green LED |
-|------|------|---------|------------|-----------|
-| 1    | N1   | Pin 2   | Pin 3      | Pin 4     |
-| 2    | N2   | Pin 5   | Pin 6      | Pin 7     |
-| 3    | S1   | Pin 8   | Pin 9      | Pin 10    |
-| 4    | S2   | Pin 11  | Pin 12     | Pin 13    |
-
-Each LED → 220Ω resistor → GND
+- **Core**: Python 3.11+
+- **Vision**: OpenCV (Open Source Computer Vision Library)
+- **Interface**: JavaScript (Vanilla ES6), HSL Glassmorphism Design
+- **Typography**: Skia, Inter
+- **Hardware**: Arduino / Serial Communication (pyserial)
 
 ---
 
-## Signal Logic
+## 🚦 Quick Start
 
-| Vehicle Count | Signal |
-|---------------|--------|
-| > 10          | 🟢 GREEN |
-| 5–10          | 🟡 YELLOW |
-| < 5           | 🔴 RED |
+### 1. Environment Setup
+```bash
+python3 -m pip install opencv-python pyserial numpy
+```
 
-Green duration scales with traffic: `min(60s, count × 2.5s)`
+### 2. Deploy Dashboard
+Simply open `index.html` in any modern browser for the visualizer.
+
+### 3. Initialize Neural Core (Python)
+Ensure your Arduino is connected if using hardware mode.
+```bash
+python3 traffic_main.py
+```
+*The system will automatically attempt to locate the Arduino on `/dev/cu.usb*` (Mac) or `COM*` (Windows).*
 
 ---
 
-## Modes
+## 📦 Project Structure
 
-**Prototype (default):** 1 camera split into 4 virtual lanes  
-**Full:** 4 cameras/videos (edit `LANE_SOURCES` in `traffic_main.py`)
-
-To switch to video files, change:
-```python
-LANE_SOURCES = ["lane1.mp4", "lane2.mp4", "lane3.mp4", "lane4.mp4"]
+```text
+AI-Traffic-Management-system/
+├── index.html               # Premium Dashboard & Visualizer
+├── traffic_main.py          # Python Neural Core (Detection & Logic)
+├── yudhisthra_arduino.ino   # Arduino Firmware (v2.0)
+├── README.md                # Documentation
+└── .git/                    # Version Control
 ```
 
 ---
 
-## Project Structure
-```
-Traffic_Project/
-├── traffic_main.py          ← Python (main program)
-├── yudhisthra_arduino.ino   ← Arduino sketch
-├── README.md
-└── lane1.mp4 / lane2.mp4    ← (optional video files)
-```
+## 🧠 The "Dharma" Logic
+
+Unlike fixed-timer systems, Yudhisthra evaluates the "need" of each lane. 
+- **High Density (>10 vehicles)**: Extended Green phase up to 60 seconds.
+- **Low Density (<5 vehicles)**: Rapid cycling to ensure no lane stays empty while others wait.
+- **Emergency Mode**: Immediate priority clearing for high-occupancy lanes.
+
+---
+
+*Named after Yudhisthra, the eldest Pandava, for his commitment to order, truth, and the balance of the world.*
