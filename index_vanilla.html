@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Smart City Traffic Management Dashboard</title>
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base: #0a0a0f;
+            --panel-bg: rgba(20, 20, 28, 0.65);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.4);
+            
+            /* Signal Colors */
+            --green: #10b981;
+            --green-glow: rgba(16, 185, 129, 0.5);
+            --yellow: #f59e0b;
+            --yellow-glow: rgba(245, 158, 11, 0.5);
+            --red: #ef4444;
+            --red-glow: rgba(239, 68, 68, 0.5);
+            
+            --road-bg: #1e1e24;
+            --road-mark: rgba(255, 255, 255, 0.15);
+            
+            font-family: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+        }
+
+        /* Glassmorphism Classes */
+        .glass {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            z-index: 10;
+        }
+
+        .brand-title {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pulse-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--green);
+            box-shadow: 0 0 12px var(--green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 var(--green-glow); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .emergency-banner {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--red);
+            color: var(--red);
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+        }
+
+        .emergency-banner.active {
+            transform: translateX(-50%) translateY(0);
+            animation: flash-border 1s infinite alternate;
+        }
+
+        @keyframes flash-border {
+            from { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+            to { box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); }
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 1.5rem;
+            padding: 0 2rem 2rem 2rem;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* Canvas Section */
+        .visualizer-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Overlay UI on Canvas */
+        .canvas-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+        }
+
+        .ai-status-badge {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--panel-border);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Right Panel */
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        /* Custom Scrollbar */
+        .info-panel::-webkit-scrollbar { width: 6px; }
+        .info-panel::-webkit-scrollbar-track { background: transparent; }
+        .info-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .card {
+            padding: 1.5rem;
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            color: #fff;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Density Metrics */
+        .density-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .dir-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .dir-card.active-green {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .dir-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .sig-indicator {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: var(--red); box-shadow: 0 0 8px var(--red-glow);
+        }
+        .sig-indicator.G { background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
+        .sig-indicator.Y { background: var(--yellow); box-shadow: 0 0 8px var(--yellow-glow); }
+
+        .density-bar-bg {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .density-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent), #60a5fa);
+            transition: width 0.4s ease;
+            border-radius: 10px;
+        }
+
+        .car-count {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        /* Control Panel */
+        .btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--panel-border);
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .btn-emergency {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-emergency:hover {
+            background: rgba(239, 68, 68, 0.2);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+        }
+
+        /* Logs */
+        .log-container {
+            height: 150px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border: 1px solid inset rgba(255,255,255,0.05);
+        }
+        .log-entry {
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+        .log-time { color: #64748b; }
+        .log-msg.ai { color: var(--accent); }
+        .log-msg.alert { color: var(--red); font-weight: bold; }
+        
+    </style>
+</head>
+<body>
+
+    <div class="emergency-banner" id="emergencyBanner">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        ROUTE CLEARANCE PROTOCOL ACTIVE
+    </div>
+
+    <header>
+        <div class="brand-title">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            Yudhisthra.AI
+        </div>
+        <div style="font-size: 0.9rem; color: var(--text-muted); display:flex; align-items:center; gap:8px;">
+            <div class="pulse-indicator"></div>
+            System Online & Optimizing
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <!-- Visualizer -->
+        <div class="glass visualizer-container" id="canvasWrapper">
+            <div class="canvas-overlay">
+                <div class="ai-status-badge">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Live Traffic Feed
+                </div>
+            </div>
+            <canvas id="simCanvas"></canvas>
+        </div>
+
+        <!-- Dashboard Panels -->
+        <div class="info-panel">
+            
+            <div class="glass card">
+                <h2>Traffic Density (Live)</h2>
+                <div class="density-grid">
+                    <div class="dir-card" id="card-NORTH">
+                        <div class="dir-header">
+                            <span>NORTH</span>
+                            <div class="sig-indicator G" id="sig-NORTH"></div>
+                        </div>
+                        <div class="car-count" id="count-NORTH">0</div>
+                        <div class="density-bar-bg"><div class="density-fill" id="bar-NORTH"></div></div>
+                    </div>
+                    <div class="dir-card" id="card-SOUTH">
+                        <div class="dir-header">
+                            <span>SOUTH</span>
+                            <div class="sig-indicator" id="sig-SOUTH"></div>
+                        </div>
+                        <div class="car-count" id="count-SOUTH">0</div>
+                        <div class="density-bar-bg"><div class="density-fill" id="bar-SOUTH"></div></div>
+                    </div>
+                    <div class="dir-card" id="card-EAST">
+                        <div class="dir-header">
+                            <span>EAST</span>
+                            <div class="sig-indicator" id="sig-EAST"></div>
+                        </div>
+                        <div class="car-count" id="count-EAST">0</div>
+                        <div class="density-bar-bg"><div class="density-fill" id="bar-EAST"></div></div>
+                    </div>
+                    <div class="dir-card" id="card-WEST">
+                        <div class="dir-header">
+                            <span>WEST</span>
+                            <div class="sig-indicator" id="sig-WEST"></div>
+                        </div>
+                        <div class="car-count" id="count-WEST">0</div>
+                        <div class="density-bar-bg"><div class="density-fill" id="bar-WEST"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass card">
+                <h2>System Controls</h2>
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    Use controls to manually evaluate AI response to outlier scenarios.
+                </div>
+                <button class="btn btn-emergency" id="btnSpawnAmbulance">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Simulate Approaching Ambulance
+                </button>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn" id="btnMoreTrafficN">Spawn North</button>
+                    <button class="btn" id="btnMoreTrafficE">Spawn East</button>
+                </div>
+            </div>
+
+            <div class="glass card">
+                <h2>Decision Engine Log</h2>
+                <div class="log-container" id="aiLog">
+                    <!-- Logs go here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+/** 
+ * AI Traffic Simulation Engine
+ * Framework-less HTML5 Canvas renderer + AI logic cycle
+ */
+
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+const wrapper = document.getElementById('canvasWrapper');
+
+// Canvas dimensions
+let width = 800;
+let height = 800;
+// Map world coordinates to match square scaling
+const MAP_SIZE = 1000; 
+
+function resize() {
+    const rect = wrapper.getBoundingClientRect();
+    const size = Math.min(rect.width, rect.height) * 0.95; 
+    canvas.width = size;
+    canvas.height = size;
+    width = size;
+    height = size;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// System State
+const DIRS = ['NORTH', 'EAST', 'SOUTH', 'WEST'];
+let signalState = {
+    NORTH: 'G', 
+    EAST: 'R', 
+    SOUTH: 'G', 
+    WEST: 'R' 
+};
+
+// If a phase change is happening
+let phaseChangeTimer = 0;
+let nextPhaseDirs = [];
+let emergencyMode = false;
+let emergencyRoute = null; // Direction where ambulance is coming FROM (e.g. SOUTH)
+
+// Traffic Data
+let vehicles = [];
+// Metrics
+let densityCounts = { NORTH: 0, EAST: 0, SOUTH: 0, WEST: 0 };
+
+// Vehicle Config
+const CAR_L = 36;
+const CAR_W = 18;
+const ROAD_WIDTH = 120;
+const LANE_WIDTH = ROAD_WIDTH / 2;
+
+// Logger
+const logEl = document.getElementById('aiLog');
+function log(msg, type="ai") {
+    const time = new Date().toISOString().substring(11, 19);
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-msg ${type}">${msg}</span>`;
+    logEl.prepend(div);
+    if(logEl.children.length > 30) logEl.lastChild.remove();
+}
+
+/** Physics & Movement */
+class Vehicle {
+    constructor(dir, isAmbulance=false) {
+        this.dir = dir; // Origin direction (Where it spawns)
+        this.isAmbulance = isAmbulance;
+        this.speed = isAmbulance ? 8 : (3 + Math.random()*2);
+        this.maxSpeed = this.speed;
+        this.w = CAR_W;
+        this.h = CAR_L;
+        this.color = isAmbulance ? '#ffffff' : `hsl(${Math.random()*360}, 70%, 60%)`;
+        this.id = Math.random().toString(36).substr(2, 9);
+        
+        // Spawn positions relative to 1000x1000 grid
+        const CENTER = MAP_SIZE / 2;
+        const offset = LANE_WIDTH/2; // Right lane driver
+
+        // Set spawn coordinates depending on direction
+        this.x = 0; this.y = 0;
+        if(dir === 'NORTH') {
+            this.x = CENTER - offset;
+            this.y = -50;
+        } else if(dir === 'SOUTH') {
+            this.x = CENTER + offset;
+            this.y = MAP_SIZE + 50;
+        } else if(dir === 'WEST') {
+            this.x = -50;
+            this.y = CENTER + offset;
+            // Switch W/H cause it's horizontal
+            this.h = CAR_W; this.w = CAR_L;
+        } else if(dir === 'EAST') {
+            this.x = MAP_SIZE + 50;
+            this.y = CENTER - offset;
+            this.h = CAR_W; this.w = CAR_L;
+        }
+    }
+
+    update(vehicles, signals) {
+        const CENTER = MAP_SIZE/2;
+        let distToCenter;
+        let isApproaching = false;
+        
+        // Determine distance to center 
+        if(this.dir === 'NORTH') { distToCenter = CENTER - this.y; isApproaching = this.y < CENTER - ROAD_WIDTH/2; }
+        if(this.dir === 'SOUTH') { distToCenter = this.y - CENTER; isApproaching = this.y > CENTER + ROAD_WIDTH/2; }
+        if(this.dir === 'WEST') { distToCenter = CENTER - this.x; isApproaching = this.x < CENTER - ROAD_WIDTH/2; }
+        if(this.dir === 'EAST') { distToCenter = this.x - CENTER; isApproaching = this.x > CENTER + ROAD_WIDTH/2; }
+
+        // Intersection bounds calculation
+        const stopLineDist = ROAD_WIDTH/2 + 10;
+        const isAtStopLine = distToCenter > stopLineDist && distToCenter < stopLineDist + 50;
+        
+        // Look ahead to front car
+        let distToCarInFront = Infinity;
+        for(let v of vehicles) {
+            if(v !== this && v.dir === this.dir) {
+                let d = Infinity;
+                if(this.dir === 'NORTH' && v.y > this.y) d = v.y - this.y;
+                if(this.dir === 'SOUTH' && v.y < this.y) d = this.y - v.y;
+                if(this.dir === 'WEST' && v.x > this.x) d = v.x - this.x;
+                if(this.dir === 'EAST' && v.x < this.x) d = this.x - v.x;
+                if(d > 0 && d < distToCarInFront) distToCarInFront = d;
+            }
+        }
+
+        const mySignal = signals[this.dir];
+        let targetSpeed = this.maxSpeed;
+
+        // Logic to stop at red/yellow lights
+        if(isApproaching && isAtStopLine && (mySignal === 'R' || mySignal === 'Y')) {
+            targetSpeed = 0;
+            if(this.isAmbulance && emergencyMode) {
+                // Ambulance ignores logic if we forced it? Wait, emergency protocol forces Green anyway.
+                // But just in case
+            }
+        }
+
+        // Logic avoiding rear-ending
+        if(distToCarInFront < (this.isAmbulance ? 50 : 40)) {
+            targetSpeed = 0;
+            // Car in front is moving slow, adjust speed
+        } else if (distToCarInFront < 100) {
+            targetSpeed *= 0.5;
+        }
+
+        // Acceleration/Deceleration smoothing
+        if(this.speed < targetSpeed) this.speed += 0.2;
+        if(this.speed > targetSpeed) this.speed -= 0.5;
+        if(this.speed < 0) this.speed = 0;
+
+        // Move
+        if(this.dir === 'NORTH') this.y += this.speed;
+        if(this.dir === 'SOUTH') this.y -= this.speed;
+        if(this.dir === 'WEST') this.x += this.speed;
+        if(this.dir === 'EAST') this.x -= this.speed;
+    }
+
+    draw(ctx, scale) {
+        ctx.fillStyle = this.color;
+        ctx.save();
+        ctx.translate(this.x * scale, this.y * scale);
+        
+        // Draw Shadow
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        if (this.isAmbulance) {
+            ctx.fillRect(-this.w/2 * scale, -this.h/2 * scale, this.w * scale, this.h * scale);
+            // Siren flashes
+            if (Math.floor(Date.now() / 150) % 2 === 0) {
+                ctx.fillStyle = '#ef4444';
+                ctx.shadowColor = '#ef4444';
+            } else {
+                ctx.fillStyle = '#3b82f6';
+                ctx.shadowColor = '#3b82f6';
+            }
+            if(this.dir === 'NORTH' || this.dir === 'SOUTH') {
+                ctx.fillRect(-this.w/4 * scale, -this.h/4 * scale, this.w/2 * scale, this.h/2 * scale);
+            } else {
+                ctx.fillRect(-this.h/4 * scale, -this.w/4 * scale, this.h/2 * scale, this.w/2 * scale);
+            }
+        } else {
+             // Normal car
+            ctx.fillRect(-this.w/2 * scale, -this.h/2 * scale, this.w * scale, this.h * scale);
+            // Windshield aesthetic
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.shadowBlur = 0;
+            if(this.dir === 'NORTH') ctx.fillRect(-this.w/2*scale + 2, Math.floor(0)*scale, (this.w-4)*scale, 6*scale);
+            if(this.dir === 'SOUTH') ctx.fillRect(-this.w/2*scale + 2, -6*scale, (this.w-4)*scale, 6*scale);
+            if(this.dir === 'EAST') ctx.fillRect(0, -this.h/2*scale + 2, 6*scale, (this.h-4)*scale);
+            if(this.dir === 'WEST') ctx.fillRect(-6*scale, -this.h/2*scale + 2, 6*scale, (this.h-4)*scale);
+        }
+
+        ctx.restore();
+    }
+}
+
+function spawnVehicle(dir=null, isAmbulance=false) {
+    if(!dir) dir = DIRS[Math.floor(Math.random() * DIRS.length)];
+    vehicles.push(new Vehicle(dir, isAmbulance));
+}
+
+// Draw Environment Background
+function drawEnvironment(ctx, scale) {
+    ctx.fillStyle = '#1e1e24'; // Grass/Background is transparent to show CSS bg, but let's draw grass
+    ctx.clearRect(0, 0, MAP_SIZE*scale, MAP_SIZE*scale);
+    
+    // Draw Roads (Cross)
+    const center = MAP_SIZE / 2 * scale;
+    const halfRoad = ROAD_WIDTH / 2 * scale;
+
+    ctx.fillStyle = 'rgba(30, 30, 36, 0.8)'; // road color
+    
+    // Vertical Road
+    ctx.fillRect(center - halfRoad, 0, ROAD_WIDTH * scale, MAP_SIZE * scale);
+    // Horizontal Road
+    ctx.fillRect(0, center - halfRoad, MAP_SIZE * scale, ROAD_WIDTH * scale);
+    // Intersection core
+    ctx.fillRect(center - halfRoad, center - halfRoad, ROAD_WIDTH * scale, ROAD_WIDTH * scale);
+
+    // Lane Markings
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 2 * scale;
+    ctx.setLineDash([15 * scale, 15 * scale]);
+
+    ctx.beginPath();
+    // Vertical dashed lines
+    ctx.moveTo(center, 0); ctx.lineTo(center, center - halfRoad);
+    ctx.moveTo(center, center + halfRoad); ctx.lineTo(center, MAP_SIZE * scale);
+    // Horizontal dashed lines
+    ctx.moveTo(0, center); ctx.lineTo(center - halfRoad, center);
+    ctx.moveTo(center + halfRoad, center); ctx.lineTo(MAP_SIZE * scale, center);
+    ctx.stroke();
+    // Stop lines
+    ctx.setLineDash([]);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 4 * scale;
+    ctx.beginPath();
+    // N
+    ctx.moveTo(center - halfRoad, center - halfRoad); ctx.lineTo(center, center - halfRoad);
+    // S
+    ctx.moveTo(center + halfRoad, center + halfRoad); ctx.lineTo(center, center + halfRoad);
+    // W
+    ctx.moveTo(center - halfRoad, center + halfRoad); ctx.lineTo(center - halfRoad, center);
+    // E
+    ctx.moveTo(center + halfRoad, center - halfRoad); ctx.lineTo(center + halfRoad, center);
+    ctx.stroke();
+
+    // Draw signals indicators
+    const drawSig = (x, y, colorCode) => {
+        ctx.fillStyle = '#0a0a0f';
+        ctx.beginPath();
+        ctx.arc(x, y, 10 * scale, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = colorCode === 'G' ? '#10b981' : colorCode === 'Y' ? '#f59e0b' : '#ef4444';
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(x, y, 6 * scale, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    };
+
+    drawSig(center - halfRoad - 15*scale, center - halfRoad - 15*scale, signalState.NORTH);
+    drawSig(center + halfRoad + 15*scale, center + halfRoad + 15*scale, signalState.SOUTH);
+    drawSig(center - halfRoad - 15*scale, center + halfRoad + 15*scale, signalState.WEST);
+    drawSig(center + halfRoad + 15*scale, center - halfRoad - 15*scale, signalState.EAST);
+}
+
+
+// Engine Render Loop
+function render() {
+    ctx.clearRect(0,0,width,height);
+    const scale = width / MAP_SIZE;
+    
+    drawEnvironment(ctx, scale);
+
+    // Update & Draw Vehicles
+    for(let i=vehicles.length-1; i>=0; i--) {
+        const v = vehicles[i];
+        v.update(vehicles, signalState);
+        v.draw(ctx, scale);
+
+        // Remove if out of bounds
+        if(v.x < -100 || v.x > MAP_SIZE+100 || v.y < -100 || v.y > MAP_SIZE+100) {
+            if(v.isAmbulance) {
+                // Ambulance cleared intersection
+                log(`Emergency Vehicle cleared the sector. Restoring normal AI control.`, `ai`);
+                emergencyMode = false;
+                emergencyRoute = null;
+                document.getElementById('emergencyBanner').classList.remove('active');
+            }
+            vehicles.splice(i, 1);
+        }
+    }
+
+    requestAnimationFrame(render);
+}
+
+/** 
+ * AI DECISION ENGINE LOGIC (Runs every 1s)
+ */
+let cycleCount = 0;
+let greenTimer = 20;
+
+setInterval(() => {
+    // 1. Calculate Densities
+    densityCounts = { NORTH:0, EAST:0, SOUTH:0, WEST:0 };
+    let hasAmbulance = false;
+
+    const CENTER = MAP_SIZE/2;
+    for(let v of vehicles) {
+        if(v.isAmbulance) hasAmbulance = true;
+
+        let approaching = false;
+        if(v.dir === 'NORTH' && v.y < CENTER) approaching = true;
+        if(v.dir === 'SOUTH' && v.y > CENTER) approaching = true;
+        if(v.dir === 'WEST' && v.x < CENTER) approaching = true;
+        if(v.dir === 'EAST' && v.x > CENTER) approaching = true;
+
+        if(approaching) {
+            densityCounts[v.dir]++;
+        }
+    }
+
+    // 2. UI Updates
+    DIRS.forEach(d => {
+        document.getElementById(`count-${d}`).innerText = densityCounts[d];
+        const barW = Math.min(100, densityCounts[d] * 10);
+        document.getElementById(`bar-${d}`).style.width = barW + '%';
+        
+        let sigColor = signalState[d] === 'G' ? 'var(--green)' : signalState[d] === 'Y' ? 'var(--yellow)' : 'var(--red)';
+        let sigEl = document.getElementById(`sig-${d}`);
+        sigEl.style.background = sigColor;
+        sigEl.style.boxShadow = `0 0 8px ${sigColor}88`; // inline opacity
+        
+        document.getElementById(`card-${d}`).classList.toggle('active-green', signalState[d] === 'G');
+    });
+
+    // 3. Phase Controller
+    if(phaseChangeTimer > 0) {
+        phaseChangeTimer--;
+        if(phaseChangeTimer === 0) {
+            // End yellow, transition next phase to green
+            DIRS.forEach(d => signalState[d] = 'R');
+            nextPhaseDirs.forEach(d => signalState[d] = 'G');
+            greenTimer = 15; // default dynamic adjust later
+            log(`Phase switched. Green given to: ${nextPhaseDirs.join(' & ')}`);
+        }
+        return; 
+    }
+
+    greenTimer--;
+
+    // 4. Emergency Override 
+    if(emergencyMode) {
+        // If an ambulance is present, ensure its route gets green immediately
+        if(signalState[emergencyRoute] !== 'G') {
+            DIRS.forEach(d => signalState[d] = 'R'); // Immediate red (no yellow in emergency)
+            signalState[emergencyRoute] = 'G';
+            log(`[EMERGENCY OVERRIDE] Enforcing GREEN limit on ${emergencyRoute}`, 'alert');
+        }
+        // Spawn less cars during emergency to unblock
+        if(Math.random() > 0.8) spawnVehicle(emergencyRoute);
+        return; // skip standard AI logic
+    }
+
+    // 5. Normal AI Density Logic - runs when greenTimer < 0
+    if(greenTimer <= 0) {
+        // Calculate pairs: NORTH/SOUTH vs EAST/WEST
+        const nsScore = densityCounts.NORTH + densityCounts.SOUTH;
+        const ewScore = densityCounts.EAST + densityCounts.WEST;
+
+        // Ensure we don't starve a lane if density is matched, by toggling
+        const isNSGreen = signalState.NORTH === 'G' || signalState.SOUTH === 'G';
+        
+        let shouldSwitch = false;
+        
+        if (isNSGreen && ewScore > nsScore) {
+            shouldSwitch = true;
+            nextPhaseDirs = ['EAST', 'WEST'];
+        } else if (!isNSGreen && nsScore >= ewScore) {
+            if(nsScore > 0) {
+                shouldSwitch = true;
+                nextPhaseDirs = ['NORTH', 'SOUTH'];
+            }
+        } 
+        
+        // Force switch if starved (max time exceeded)
+        if(greenTimer < -15 && (nsScore>0 || ewScore>0)) {
+            shouldSwitch = true;
+            nextPhaseDirs = isNSGreen ? ['EAST', 'WEST'] : ['NORTH', 'SOUTH'];
+        }
+
+        if(shouldSwitch) {
+            // Initiate Yellow phase
+            DIRS.forEach(d => { if(signalState[d] === 'G') signalState[d] = 'Y'; });
+            phaseChangeTimer = 3; // 3 seconds yellow
+            log(`Densities computed. Evaluating switch. Entering transition phase.`);
+        } else {
+            // keep current phase, wait slightly
+            greenTimer = 5; 
+        }
+    }
+
+
+    // 6. Random Traffic Spawning
+    if(Math.random() > 0.3) {
+        spawnVehicle();
+    }
+    cycleCount++;
+
+}, 1000);
+
+// Interaction
+document.getElementById('btnSpawnAmbulance').addEventListener('click', () => {
+    if(emergencyMode) return;
+    
+    // Pick a random route for ambulance
+    emergencyRoute = DIRS[Math.floor(Math.random() * DIRS.length)];
+    emergencyMode = true;
+    spawnVehicle(emergencyRoute, true);
+    
+    log(`[EMERGENCY DETECTED] Ambulance approaching from ${emergencyRoute}! Engaging priority protocol.`, 'alert');
+    document.getElementById('emergencyBanner').classList.add('active');
+});
+
+document.getElementById('btnMoreTrafficN').addEventListener('click', () => {
+    for(let i=0;i<5;i++) setTimeout(() => spawnVehicle('NORTH'), i*300);
+    log(`Manual spawn injected on NORTH flow.`);
+});
+document.getElementById('btnMoreTrafficE').addEventListener('click', () => {
+    for(let i=0;i<5;i++) setTimeout(() => spawnVehicle('EAST'), i*300);
+    log(`Manual spawn injected on EAST flow.`);
+});
+
+log("Yudhisthra AI Traffic Core initialized online.");
+log("Loading density prediction models...");
+log("Listening for emergency vehicle telemetry...", "alert");
+
+// Start renderer
+requestAnimationFrame(render);
+for(let i=0;i<5;i++) spawnVehicle(); // Initial traffic
+
+
+</script>
+</body>
+</html>

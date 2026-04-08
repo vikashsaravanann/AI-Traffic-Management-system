@@ -137,8 +137,9 @@ def run_single_camera(arduino):
 
     while True:
         ret, frame = cap.read()
-        if not ret:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        if not ret or frame is None:
+            if not isinstance(LANE_SOURCES[0], int): # Only reset if it's a file
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             continue
 
         frame   = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))
@@ -196,9 +197,13 @@ def run_multi_camera(arduino):
         frames = []
         for i, cap in enumerate(caps):
             ret, frame = cap.read()
-            if not ret:
-                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                ret, frame = cap.read()
+            if not ret or frame is None:
+                if not isinstance(LANE_SOURCES[i], int):
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, frame = cap.read()
+            
+            if frame is None:
+                continue
 
             processed, _, count = detect_vehicles(frame, subs[i])
             with lock:
