@@ -42,8 +42,8 @@ def compute_green_time(count):
     return min(60, max(10, int(count * 2.5)))
 
 # ─── LANE SOURCES ─────────────────────────────────────────────────────────────
-# Set to Mobile DroidCam stream
-LANE_SOURCES = ["http://172.20.51.232:4747/video", "http://172.20.43.230:4747/video", 0, 0]
+# 0 indicates default webcam. Can be replaced with RTSP/video paths.
+LANE_SOURCES = ["http://172.20.43.230:4747/video", 0, 0, 0]
 
 # ─── GLOBALS ──────────────────────────────────────────────────────────────────
 lane_counts  = [0] * NUM_LANES
