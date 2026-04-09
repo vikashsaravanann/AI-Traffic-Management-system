@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
+import { useTraffic } from '../utils/TrafficContext';
 
-// Shared logic constants
 const DIRS = ['NORTH', 'SOUTH', 'EAST', 'WEST'];
 const CAR_L = 40;
 const CAR_W = 20;
@@ -8,7 +8,6 @@ const ROAD_WIDTH = 140;
 const MAP_SIZE = 1000;
 const CENTER = MAP_SIZE / 2;
 
-// Vehicle class — defined at module scope so all hooks can access it
 class Vehicle {
   constructor(dir, isAmbulance = false) {
     this.dir = dir;
@@ -17,9 +16,10 @@ class Vehicle {
     this.maxSpeed = this.speed;
     this.x = 0;
     this.y = 0;
+    this.id = Math.random();
     this.w = ['NORTH', 'SOUTH'].includes(dir) ? CAR_W : CAR_L;
     this.h = ['NORTH', 'SOUTH'].includes(dir) ? CAR_L : CAR_W;
-    this.color = isAmbulance ? '#FFFFFF' : `hsl(${Math.random() * 360}, 80%, 60%)`;
+    this.color = isAmbulance ? '#FFFFFF' : `hsl(${200 + Math.random() * 40}, 80%, 50%)`; // Blueish theme
 
     const OFFSET = ROAD_WIDTH / 4;
     if (dir === 'NORTH') { this.x = CENTER - OFFSET; this.y = -50; }
@@ -37,8 +37,8 @@ class Vehicle {
     if (this.dir === 'WEST')  { distCenter = CENTER - this.x; isApproaching = this.x < CENTER - ROAD_WIDTH / 2; }
     if (this.dir === 'EAST')  { distCenter = this.x - CENTER; isApproaching = this.x > CENTER + ROAD_WIDTH / 2; }
 
-    const stopDist = ROAD_WIDTH / 2 + 20;
-    const isAtStopLine = distCenter > stopDist && distCenter < stopDist + 60;
+    const stopDist = ROAD_WIDTH / 2 + 30;
+    const isAtStopLine = distCenter > stopDist && distCenter < stopDist + 80;
 
     let distToCar = Infinity;
     for (let v of vehicles) {
@@ -48,22 +48,22 @@ class Vehicle {
         if (this.dir === 'SOUTH' && v.y < this.y) d = this.y - v.y;
         if (this.dir === 'WEST'  && v.x > this.x) d = v.x - this.x;
         if (this.dir === 'EAST'  && v.x < this.x) d = this.x - v.x;
+        d -= CAR_L;
         if (d > 0 && d < distToCar) distToCar = d;
       }
     }
 
     let target = this.maxSpeed;
-    const sig = signals[this.dir];
+    const sigMap = { NORTH: 'north', SOUTH: 'south', EAST: 'east', WEST: 'west' };
+    const sig = signals[sigMap[this.dir]];
 
     if (isApproaching && isAtStopLine && (sig === 'R' || sig === 'Y')) {
       if (!this.isAmbulance) target = 0;
     }
 
-    if (distToCar < (this.isAmbulance ? 60 : 50)) {
-      target = 0;
-    } else if (distToCar < 120) {
-      target *= 0.5;
-    }
+    const safeGap = this.isAmbulance ? 50 : 70;
+    if (distToCar < safeGap) target = 0;
+    else if (distToCar < safeGap * 2) target *= 0.5;
 
     if (this.speed < target) this.speed += 0.2;
     if (this.speed > target) this.speed -= 0.6;
@@ -76,261 +76,126 @@ class Vehicle {
   }
 
   draw(ctx, scale) {
+    ctx.save();
+    ctx.translate(this.x * scale, this.y * scale);
+    
+    // Ambient Glow
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = (this.isAmbulance ? 30 : 10) * scale;
+
     ctx.fillStyle = this.color;
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
+    const w = this.w * scale;
+    const h = this.h * scale;
+    ctx.roundRect(-w/2, -h/2, w, h, 4 * scale);
+    ctx.fill();
+
     if (this.isAmbulance) {
-      ctx.roundRect(
-        (this.x - this.w / 2) * scale,
-        (this.y - this.h / 2) * scale,
-        this.w * scale,
-        this.h * scale,
-        8 * scale
-      );
-      ctx.fill();
-      // Siren flash
-      ctx.fillStyle = Math.floor(Date.now() / 150) % 2 === 0 ? '#FF3B3B' : '#00D4FF';
-      ctx.shadowColor = ctx.fillStyle;
-      ctx.shadowBlur = 20;
-      ctx.beginPath();
-      ctx.roundRect(
-        (this.x - this.w / 4) * scale,
-        (this.y - this.h / 4) * scale,
-        (this.w / 2) * scale,
-        (this.h / 2) * scale,
-        2 * scale
-      );
-      ctx.fill();
-    } else {
-      ctx.roundRect(
-        (this.x - this.w / 2) * scale,
-        (this.y - this.h / 2) * scale,
-        this.w * scale,
-        this.h * scale,
-        4 * scale
-      );
-      ctx.fill();
+        const phase = Math.floor(Date.now() / 150) % 2;
+        ctx.fillStyle = phase === 0 ? '#ff0000' : '#00aaff';
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 20 * scale;
+        ctx.beginPath();
+        ctx.arc(0, 0, 8 * scale, 0, Math.PI * 2);
+        ctx.fill();
     }
-    ctx.shadowBlur = 0;
+    
+    ctx.restore();
   }
 }
 
-// Draw the intersection environment
-function drawEnv(ctx, scale, emergencyRoute) {
-  ctx.clearRect(0, 0, MAP_SIZE * scale, MAP_SIZE * scale);
-
-  // Roads
-  ctx.fillStyle = '#1e1e24';
-  ctx.fillRect((CENTER - ROAD_WIDTH / 2) * scale, 0, ROAD_WIDTH * scale, MAP_SIZE * scale);
-  ctx.fillRect(0, (CENTER - ROAD_WIDTH / 2) * scale, MAP_SIZE * scale, ROAD_WIDTH * scale);
-
-  // Emergency route highlight (glowing corridor)
-  if (emergencyRoute) {
-    ctx.fillStyle = 'rgba(0, 212, 255, 0.15)';
-    if (emergencyRoute === 'NORTH' || emergencyRoute === 'SOUTH') {
-      ctx.fillRect((CENTER - ROAD_WIDTH / 2) * scale, 0, ROAD_WIDTH * scale, MAP_SIZE * scale);
-    } else {
-      ctx.fillRect(0, (CENTER - ROAD_WIDTH / 2) * scale, MAP_SIZE * scale, ROAD_WIDTH * scale);
-    }
-  }
-
-  // Dashed lane markings
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-  ctx.lineWidth = 2 * scale;
-  ctx.setLineDash([15 * scale, 15 * scale]);
-  ctx.beginPath();
-  ctx.moveTo(CENTER * scale, 0);
-  ctx.lineTo(CENTER * scale, (CENTER - ROAD_WIDTH / 2) * scale);
-  ctx.moveTo(CENTER * scale, (CENTER + ROAD_WIDTH / 2) * scale);
-  ctx.lineTo(CENTER * scale, MAP_SIZE * scale);
-  ctx.moveTo(0, CENTER * scale);
-  ctx.lineTo((CENTER - ROAD_WIDTH / 2) * scale, CENTER * scale);
-  ctx.moveTo((CENTER + ROAD_WIDTH / 2) * scale, CENTER * scale);
-  ctx.lineTo(MAP_SIZE * scale, CENTER * scale);
-  ctx.stroke();
-
-  // Solid stop lines
-  ctx.strokeStyle = '#FFFFFF';
-  ctx.lineWidth = 4 * scale;
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  // North stop line
-  ctx.moveTo((CENTER - ROAD_WIDTH / 2) * scale, (CENTER - ROAD_WIDTH / 2) * scale);
-  ctx.lineTo(CENTER * scale, (CENTER - ROAD_WIDTH / 2) * scale);
-  // South stop line
-  ctx.moveTo((CENTER + ROAD_WIDTH / 2) * scale, (CENTER + ROAD_WIDTH / 2) * scale);
-  ctx.lineTo(CENTER * scale, (CENTER + ROAD_WIDTH / 2) * scale);
-  // West stop line
-  ctx.moveTo((CENTER - ROAD_WIDTH / 2) * scale, (CENTER + ROAD_WIDTH / 2) * scale);
-  ctx.lineTo((CENTER - ROAD_WIDTH / 2) * scale, CENTER * scale);
-  // East stop line
-  ctx.moveTo((CENTER + ROAD_WIDTH / 2) * scale, (CENTER - ROAD_WIDTH / 2) * scale);
-  ctx.lineTo((CENTER + ROAD_WIDTH / 2) * scale, CENTER * scale);
-  ctx.stroke();
-}
-
-export default function MapView({ isEmergency, setDensities, setSignals, setCountdown, onEmergencyCleared }) {
+export default function MapView() {
+  const { data } = useTraffic();
   const canvasRef = useRef(null);
+  const vehicles = useRef([]);
 
-  // Physics engine state — persists across renders without causing re-renders
-  const engine = useRef({
-    vehicles: [],
-    signals: { NORTH: 'G', SOUTH: 'G', EAST: 'R', WEST: 'R' },
-    greenTimer: 15,
-    phaseChangeTimer: 0,
-    nextPhaseDirs: [],
-    emergencyRoute: null,
-    emergencyClearedCalled: false,
-  });
-
-  // Main canvas loop + AI logic tick
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     let animationId;
-    let logicTickInterval;
 
     const resize = () => {
       const parent = canvas.parentElement;
-      const size = Math.min(parent.clientWidth, parent.clientHeight) - 40;
+      const size = Math.min(parent.clientWidth, parent.clientHeight);
       canvas.width = size;
       canvas.height = size;
     };
     window.addEventListener('resize', resize);
     resize();
 
-    const e = engine.current;
-
-    // Seed initial traffic
-    if (e.vehicles.length === 0) {
-      for (let i = 0; i < 8; i++) {
-        e.vehicles.push(new Vehicle(DIRS[Math.floor(Math.random() * 4)]));
-      }
-    }
-
-    // 60 FPS render loop
     const render = () => {
       const scale = canvas.width / MAP_SIZE;
-      drawEnv(ctx, scale, e.emergencyRoute);
+      
+      // Clear & Draw Road
+      ctx.fillStyle = '#0a0c10';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      for (let i = e.vehicles.length - 1; i >= 0; i--) {
-        const v = e.vehicles[i];
-        v.update(e.vehicles, e.signals);
+      // Cyber Road
+      ctx.fillStyle = '#11141d';
+      ctx.fillRect((CENTER - ROAD_WIDTH/2)*scale, 0, ROAD_WIDTH*scale, canvas.height);
+      ctx.fillRect(0, (CENTER - ROAD_WIDTH/2)*scale, canvas.width, ROAD_WIDTH*scale);
+
+      // Grid Pattern
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.lineWidth = 1;
+      for(let i=0; i<MAP_SIZE; i+=50) {
+          ctx.beginPath(); ctx.moveTo(i*scale, 0); ctx.lineTo(i*scale, canvas.height); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, i*scale); ctx.lineTo(canvas.width, i*scale); ctx.stroke();
+      }
+
+      // Vehicles
+      const currentVehicles = vehicles.current;
+      
+      // Spawn logic based on density
+      const totalInSim = currentVehicles.length;
+      const targetDensity = Object.values(data.densities).reduce((a,b)=>a+b, 0);
+      
+      if (totalInSim < targetDensity && Math.random() > 0.5) {
+          const dir = DIRS[Math.floor(Math.random()*4)];
+          currentVehicles.push(new Vehicle(dir, data.emergency === dir.toLowerCase()));
+      }
+
+      for (let i = currentVehicles.length - 1; i >= 0; i--) {
+        const v = currentVehicles[i];
+        v.update(currentVehicles, data.signals);
         v.draw(ctx, scale);
 
-        // Remove vehicles that have left the map
-        if (v.x < -150 || v.x > MAP_SIZE + 150 || v.y < -150 || v.y > MAP_SIZE + 150) {
-          if (v.isAmbulance && !e.emergencyClearedCalled) {
-            e.emergencyClearedCalled = true;
-            setTimeout(onEmergencyCleared, 0);
-          }
-          e.vehicles.splice(i, 1);
+        if (v.x < -100 || v.x > MAP_SIZE + 100 || v.y < -100 || v.y > MAP_SIZE + 100) {
+            currentVehicles.splice(i, 1);
         }
       }
+
+      // Stop Line Glows
+      const glows = {
+          north: { x: CENTER - ROAD_WIDTH/4, y: CENTER - ROAD_WIDTH/2 - 10 },
+          south: { x: CENTER + ROAD_WIDTH/4, y: CENTER + ROAD_WIDTH/2 + 10 },
+          west:  { x: CENTER - ROAD_WIDTH/2 - 10, y: CENTER + ROAD_WIDTH/4 },
+          east:  { x: CENTER + ROAD_WIDTH/2 + 10, y: CENTER - ROAD_WIDTH/4 }
+      };
+
+      Object.entries(data.signals).forEach(([key, sig]) => {
+          const g = glows[key];
+          const color = sig === 'G' ? '#00ff88' : (sig === 'Y' ? '#ffaa00' : '#ff3b3b');
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 40 * scale;
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(g.x * scale, g.y * scale, 12 * scale, 0, Math.PI * 2);
+          ctx.fill();
+      });
+
       animationId = requestAnimationFrame(render);
     };
 
-    // AI decision engine — 1 Hz
-    const aiTick = () => {
-      const counts = { NORTH: 0, SOUTH: 0, EAST: 0, WEST: 0 };
-
-      e.vehicles.forEach((v) => {
-        let approaching = false;
-        if (v.dir === 'NORTH' && v.y < CENTER) approaching = true;
-        if (v.dir === 'SOUTH' && v.y > CENTER) approaching = true;
-        if (v.dir === 'WEST'  && v.x < CENTER) approaching = true;
-        if (v.dir === 'EAST'  && v.x > CENTER) approaching = true;
-        if (approaching) counts[v.dir]++;
-      });
-
-      setDensities({ ...counts });
-
-      // Emergency override — lock route green, everything else red
-      if (e.emergencyRoute) {
-        DIRS.forEach((d) => (e.signals[d] = 'R'));
-        e.signals[e.emergencyRoute] = 'G';
-        setSignals({ ...e.signals });
-        setCountdown('--');
-        if (Math.random() > 0.8) e.vehicles.push(new Vehicle(e.emergencyRoute));
-        return;
-      }
-
-      // Phase transition (yellow → new green)
-      if (e.phaseChangeTimer > 0) {
-        e.phaseChangeTimer--;
-        if (e.phaseChangeTimer === 0) {
-          DIRS.forEach((d) => (e.signals[d] = 'R'));
-          e.nextPhaseDirs.forEach((d) => (e.signals[d] = 'G'));
-          e.greenTimer = 15;
-        }
-        setSignals({ ...e.signals });
-        setCountdown(e.greenTimer);
-        return;
-      }
-
-      // Standard AI density-based switching
-      e.greenTimer--;
-      if (e.greenTimer <= 0) {
-        const ns = counts.NORTH + counts.SOUTH;
-        const ew = counts.EAST + counts.WEST;
-        const isNS = e.signals.NORTH === 'G' || e.signals.SOUTH === 'G';
-
-        let switchPhase = false;
-        if (isNS && ew > ns) {
-          switchPhase = true;
-          e.nextPhaseDirs = ['EAST', 'WEST'];
-        } else if (!isNS && ns > ew) {
-          switchPhase = true;
-          e.nextPhaseDirs = ['NORTH', 'SOUTH'];
-        } else if (e.greenTimer < -10 && (ns > 0 || ew > 0)) {
-          switchPhase = true;
-          e.nextPhaseDirs = isNS ? ['EAST', 'WEST'] : ['NORTH', 'SOUTH'];
-        }
-
-        if (switchPhase) {
-          DIRS.forEach((d) => { if (e.signals[d] === 'G') e.signals[d] = 'Y'; });
-          e.phaseChangeTimer = 3;
-        } else {
-          e.greenTimer = 5;
-        }
-      }
-
-      setSignals({ ...e.signals });
-      setCountdown(Math.max(0, e.greenTimer));
-
-      // Auto-spawn traffic
-      if (Math.random() > 0.4) {
-        e.vehicles.push(new Vehicle(DIRS[Math.floor(Math.random() * 4)]));
-      }
-    };
-
     render();
-    logicTickInterval = setInterval(aiTick, 1000);
-
     return () => {
       cancelAnimationFrame(animationId);
-      clearInterval(logicTickInterval);
       window.removeEventListener('resize', resize);
     };
-  }, []);
-
-  // React to external emergency trigger from parent
-  useEffect(() => {
-    const e = engine.current;
-    if (isEmergency && !e.emergencyRoute) {
-      const randDir = DIRS[Math.floor(Math.random() * 4)];
-      e.emergencyRoute = randDir;
-      e.emergencyClearedCalled = false;
-      e.vehicles.push(new Vehicle(randDir, true));
-    } else if (!isEmergency) {
-      e.emergencyRoute = null;
-    }
-  }, [isEmergency]);
+  }, [data]);
 
   return (
-    <div className="flex-1 glass-panel flex justify-center items-center relative p-4">
-      <canvas ref={canvasRef} className="w-full h-full object-contain rounded-xl"></canvas>
+    <div className="w-full h-full flex justify-center items-center overflow-hidden rounded-3xl border border-white/5 bg-surface/50 shadow-inner-premium translate-z-0">
+      <canvas ref={canvasRef} className="opacity-80"></canvas>
     </div>
   );
 }

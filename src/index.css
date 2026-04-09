@@ -1,34 +1,71 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Poppins:wght@400;600;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Poppins:wght@400;600;800&family=Outfit:wght@300;400;600;700&display=swap');
 
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0B0F1A;
+  --color-background: #080B13;
+  --color-surface: #121826;
   --color-primary: #00D4FF;
+  --color-primary-glow: rgba(0, 212, 255, 0.4);
   --color-success: #00FF88;
   --color-warning: #FFD600;
   --color-danger: #FF3B3B;
-  --font-sans: "Inter", "Poppins", sans-serif;
+  --color-accent: #7000FF;
+  
+  --font-sans: "Inter", "Outfit", "Poppins", sans-serif;
+  --font-display: "Outfit", sans-serif;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  
+  --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  --shadow-glow: 0 0 20px var(--color-primary-glow);
 }
 
-body {
-  background-color: var(--color-background);
-  color: white;
-  overflow: hidden;
-  font-family: 'Inter', sans-serif;
-  margin: 0;
-  padding: 0;
+@layer base {
+  body {
+    @apply bg-background text-white antialiased selection:bg-primary/30 selection:text-white;
+    font-family: var(--font-sans);
+    overflow: hidden;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply tracking-tight font-semibold;
+  }
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Poppins', sans-serif;
+@layer components {
+  .glass-panel {
+    @apply bg-surface/60 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-premium relative overflow-hidden;
+  }
+  
+  .glass-panel::before {
+    content: '';
+    @apply absolute inset-0 bg-linear-to-b from-white/5 to-transparent pointer-events-none;
+  }
+
+  .status-pill {
+    @apply px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2;
+  }
+  
+  .btn-primary {
+    @apply bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary px-4 py-2 rounded-lg 
+           transition-all duration-300 flex items-center gap-2 font-semibold shadow-glow/10 active:scale-95 cursor-pointer;
+  }
+
+  .signal-dot {
+    @apply w-3 h-3 rounded-full animate-pulse;
+  }
 }
 
-.glass-panel {
-  background-color: rgba(20,25,40,0.65);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 1rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+/* Custom scrollbar for a premium feel */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
 }
