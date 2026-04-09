@@ -39,7 +39,7 @@ export const TrafficProvider = ({ children }) => {
     if (mode !== "live") return;
     const fetchLive = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/status");
+        const res = await fetch("http://localhost:5001/api/status");
         const json = await res.json();
         setData(json);
       } catch (err) {

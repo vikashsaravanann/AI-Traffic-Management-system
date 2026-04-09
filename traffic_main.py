@@ -249,7 +249,7 @@ if __name__ == '__main__':
 
     # Spawn Async Loops
     threading.Thread(target=logic.solve, daemon=True).start()
-    threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, use_reloader=False), daemon=True).start()
+    threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5001, use_reloader=False), daemon=True).start()
 
     # Main Vision Loop (Must stay on main thread for OpenCV)
     vision.run()
