@@ -34,26 +34,26 @@ export default function Header() {
       
       {/* Controls */}
       <div className="flex items-center gap-6 text-white">
-        {/* Hardware Status */}
+        {/* Hardware Link (Required for Web Serial) */}
+        <button 
+          onClick={handleSerialConnect}
+          className={`btn-primary flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest ${isSerialConnected ? 'border-success/50 text-success bg-success/10' : 'border-primary/20 text-primary'}`}
+        >
+          {isSerialConnected ? <ShieldCheck className="w-3 h-3" /> : <Link className="w-3 h-3" />}
+          <span>{isSerialConnected ? 'Sync Active' : 'Initialize Sync'}</span>
+        </button>
+
+        {/* Neural Engine Status */}
         <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
             <ShieldCheck className={`w-3 h-3 ${data.health.hardware ? 'text-success' : 'text-gray-500'}`} />
             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                {data.health.hardware ? 'Hardware Safe' : 'Virtual Mode'}
+                {data.health.hardware ? 'AI Optimal' : 'Virtual Core'}
             </span>
         </div>
-
-        {/* Mode Toggle */}
-        <button 
-          onClick={() => setMode(prev => prev === 'live' ? 'simulation' : 'live')}
-          className={`btn-primary gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 ${mode === 'live' ? 'border-success/50 text-success bg-success/10' : 'border-warning/50 text-warning bg-warning/10'}`}
-        >
-          {mode === 'live' ? <Radio className="w-4 h-4 animate-ping" /> : <Zap className="w-4 h-4" />}
-          <span className="text-sm font-bold">{mode === 'live' ? 'Switch to simulation' : 'Switch to live'}</span>
-        </button>
         
         {/* Time */}
         <div className="flex flex-col items-end border-l border-white/10 pl-6">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-1">Session Time</span>
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-1">Session Node</span>
           <span className="font-mono text-sm font-bold text-gray-300">
             {data.timestamp}
           </span>

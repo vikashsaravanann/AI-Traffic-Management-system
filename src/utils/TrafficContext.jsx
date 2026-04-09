@@ -13,7 +13,7 @@ export const TrafficProvider = ({ children }) => {
     timestamp: "--:--:--"
   });
 
-  const [mode, setMode] = useState("simulation");
+  const [mode, setMode] = useState("live");
 
   // Simulation Logic
   useEffect(() => {
