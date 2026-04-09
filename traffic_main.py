@@ -32,7 +32,7 @@ CONFIG = {
     "BAUD": 115200,
     "LANES": ["NORTH", "SOUTH", "EAST", "WEST"],
     "LANE_KEYS": ["north", "south", "east", "west"],
-    "CAMERA_SOURCE": 0,
+    "CAMERA_SOURCE": "http://172.20.46.200:4747/video",
     "FRAME_RES": (640, 480),
     "MODEL_PATH": "yolov8n.pt",
     "VEHICLE_CLASSES": [2, 3, 5, 7], # car, motor, bus, truck
