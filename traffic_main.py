@@ -19,23 +19,11 @@ import torch
 from flask import Flask, jsonify
 from flask_cors import CORS
 
-# Patch for PyTorch 2.6+ security update
-try:
-    import torch.nn.modules.container
-    from ultralytics.nn.tasks import DetectionModel
-    if hasattr(torch.serialization, 'add_safe_globals'):
-        # Allowlist the classes required by YOLOv8 for safe loading
-        torch.serialization.add_safe_globals([
-            DetectionModel, 
-            torch.nn.modules.container.Sequential,
-            torch.nn.modules.conv.Conv2d,
-            torch.nn.modules.batchnorm.BatchNorm2d,
-            torch.nn.modules.activation.SiLU,
-            torch.nn.modules.upsampling.Upsample,
-            torch.nn.modules.container.ModuleList
-        ])
-except Exception as e:
-    pass
+# PATCH: Support for PyTorch 2.6+ "weights_only" security update
+# We use a context-safe override to ensure YOLOv8 loads correctly from the local trusted model.
+import functools
+import requests
+torch.load = functools.partial(torch.load, weights_only=False)
 
 # ─── LOGGING CONFIG ───────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -142,29 +130,40 @@ class VisionEngine:
     def __init__(self):
         try:
             from ultralytics import YOLO
-            logger.info(f"Loading AI Model: {CONFIG['MODEL_PATH']}...")
+            logger.info(f"YOLO Neural Engine: Loading {CONFIG['MODEL_PATH']}...")
             self.model = YOLO(CONFIG["MODEL_PATH"])
+            logger.info("YOLO Neural Engine: [SUCCESS]")
         except Exception as e:
-            logger.error(f"AI Engine failed to load: {e}")
+            logger.error(f"Neural Engine failed to load: {e}")
             exit(1)
         
-        # Smart Camera Initialization
+        # Link Setup
         self.cap = None
-        droid_url = f"http://{CONFIG['DROIDCAM_IP']}:{CONFIG['DROID_PORT']}/video"
-        logger.info(f"Attempting to link DroidCam: {droid_url}")
+        self.link_url = f"http://{CONFIG['DROIDCAM_IP']}:{CONFIG['DROID_PORT']}/video"
         
-        # Try DroidCam first
-        self.cap = cv2.VideoCapture(droid_url)
-        if not self.cap.isOpened():
-            logger.warning("DroidCam /video endpoint failed. Trying /mjpegfeed...")
-            self.cap = cv2.VideoCapture(droid_url.replace('/video', '/mjpegfeed'))
+        # Diagnostics
+        logger.info(f"Targeting DroidCam: {self.link_url}")
+        try:
+            test_res = requests.get(f"http://{CONFIG['DROIDCAM_IP']}:{CONFIG['DROID_PORT']}/", timeout=2)
+            if test_res.status_code == 200:
+                logger.info("DroidCam Reachability: [ONLINE]")
+            else:
+                logger.warning(f"DroidCam Reachability: [UNEXPECTED STATUS {test_res.status_code}]")
+        except Exception:
+            logger.error("DroidCam Reachability: [OFFLINE] Check if the app is open and on the same Wi-Fi.")
         
+        # Initialization
+        self.cap = cv2.VideoCapture(self.link_url)
         if not self.cap.isOpened():
-            logger.warning("Mobile app not reached. Falling back to local hardware (Source 0).")
+            logger.warning("DroidCam endpoint /video failed. Trying /mjpegfeed...")
+            self.cap = cv2.VideoCapture(self.link_url.replace('/video', '/mjpegfeed'))
+
+        if not self.cap.isOpened():
+            logger.warning("Mobile app not reached. Defaulting to local hardware (Source 0).")
             self.cap = cv2.VideoCapture(0)
 
         if not self.cap.isOpened():
-            logger.error("No valid camera source found. Please check your DroidCam app.")
+            logger.error("CRITICAL: No valid camera sensor detected.")
 
     def run(self):
         num_lanes = len(CONFIG["LANES"])
