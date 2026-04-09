@@ -15,8 +15,17 @@ import time
 import threading
 import logging
 import serial.tools.list_ports
+import torch
 from flask import Flask, jsonify
 from flask_cors import CORS
+
+# Patch for PyTorch 2.6+ security update
+try:
+    from ultralytics.nn.tasks import DetectionModel
+    if hasattr(torch.serialization, 'add_safe_globals'):
+        torch.serialization.add_safe_globals([DetectionModel])
+except ImportError:
+    pass
 
 # ─── LOGGING CONFIG ───────────────────────────────────────────────────────────
 logging.basicConfig(
